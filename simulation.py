@@ -3,29 +3,32 @@ import pygame
 from collections import deque
 import heapq
 
-# ======================
-# 1) HARİTA, IŞIK, YARDIMCI FONKSİYONLAR
-# ======================
+# =============== TEMEL AYARLAR ===============
+
+UI_HEIGHT = 60   # üstte yazı alanı
+CELL_SIZE = 40   # kare boyutu
 
 
-# 0 = yol, 1 = engel, S = başlangıç, G = hedef, T = trafik ışığı
-grid = [
-    ['S', 0,   0,   0,   0,   0,   0,   0,   0,   0],
-    [0,   1,   1,   1,   0,   1,   0,   1,   1,   0],
-    [0,   0,   0,   1,  'T',  1,   0,   0,   0,   0],
-    [1,   1,   0,   1,   0,   1,   1,   1,   0,   1],
-    [0,   0,   0,   0,   0,   0,   0,   1,   0,   0],
-    [0,   1,   1,   1,   1,   1,   0,   1,   0,   1],
-    [0,   0,   0,   0,   0,   0,   0,   1,   0,   0],
-    [0,   1,   1,   1,   1,   1,   0,   0,   0,  'G'],
+# 0 = yol, 1 = engel, S = başlangıç, G = hedef, T = trafik lambası
+BASE_GRID = [
+    ['S', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [0,   1,   1,   0,   1,   0,   1,   0,   1,   0,   1,   0,   1,   0,   0],
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   0,   0],
+    [1,   1,   0,   1,   1,   1,   0,   1,   1,   1,   0,   1,   1,   1,   0],
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [0,   1,   1,   1,   1,   1,   0,   1,   1,   1,   0,   1,   1,   1,   0],
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [0,   1,   1,   1,   0,   1,   1,   1,   0,   1,   1,   1,   0,   1,   0],
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+    [0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  'G'],
 ]
 
-ROWS = len(grid)
-COLS = len(grid[0])
+ROWS = len(BASE_GRID)
+COLS = len(BASE_GRID[0])
 
 
 class TrafficLight:
-    def __init__(self, position, red_time=3, green_time=3):
+    def __init__(self, position=None, red_time=3, green_time=3):
         self.position = position
         self.red_time = red_time
         self.green_time = green_time
@@ -40,6 +43,12 @@ class TrafficLight:
         self.time += 1
 
 
+# =============== YARDIMCI FONKSİYONLAR ===============
+
+def copy_grid():
+    return [row[:] for row in BASE_GRID]
+
+
 def find_start_goal(g):
     start = None
     goal = None
@@ -50,6 +59,14 @@ def find_start_goal(g):
             elif g[r][c] == 'G':
                 goal = (r, c)
     return start, goal
+
+
+def find_traffic_light_pos(g):
+    for r in range(len(g)):
+        for c in range(len(g[0])):
+            if g[r][c] == 'T':
+                return (r, c)
+    return None
 
 
 def is_free(g, r, c):
@@ -66,9 +83,7 @@ def manhattan(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-# ==========
-# 2) ALGORİTMALAR
-# ==========
+# =============== ALGORİTMALAR ===============
 
 def bfs(g, start, goal):
     queue = deque([start])
@@ -180,178 +195,218 @@ def astar_path(g, start, goal):
     return path
 
 
-def compute_path(algo_name, start, goal):
+def compute_path(algo_name, g, start, goal):
+    if not start or not goal:
+        return []
     if algo_name == "BFS":
-        return bfs(grid, start, goal)
+        return bfs(g, start, goal)
     elif algo_name == "Greedy":
-        return greedy_path(grid, start, goal)
+        return greedy_path(g, start, goal)
     elif algo_name == "A*":
-        return astar_path(grid, start, goal)
+        return astar_path(g, start, goal)
     else:
         return []
 
 
-start, goal = find_start_goal(grid)
-traffic_light = TrafficLight((2, 4), red_time=3, green_time=3)
-
-current_algo = "BFS"
-path = compute_path(current_algo, start, goal)
-
-# Dinamik engel değişkenleri
-dynamic_obstacle_created = False
-dynamic_obstacle_pos = None
-
-# ======================
-# 3) PYGAME AYARLARI
-# ======================
+# =============== PYGAME BAŞLANGIÇ ===============
 
 pygame.init()
+grid = copy_grid()
+start, goal = find_start_goal(grid)
+traffic_light = TrafficLight(find_traffic_light_pos(grid), red_time=3, green_time=3)
 
-CELL_SIZE = 60  
+current_algo = "BFS"
+edit_mode = "none"   # "obstacle", "start", "goal", "traffic"
+
+path = compute_path(current_algo, grid, start, goal)
+path_index = 0
+
 WIDTH = COLS * CELL_SIZE
-HEIGHT = ROWS * CELL_SIZE + 40  
+HEIGHT = ROWS * CELL_SIZE + UI_HEIGHT
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Otonom Araç Simülasyonu - Dinamik Engel + 3 Algoritma")
-
+pygame.display.set_caption("Otonom Araç Simülasyonu - 1:BFS 2:Greedy 3:A* | O/S/G/T düzenleme")
 clock = pygame.time.Clock()
-font = pygame.font.SysFont("Arial", 20)
+font = pygame.font.SysFont("Arial", 18)
 
-path_index = 0
+
+def recalc_everything():
+    """Grid değiştiğinde S, G, trafik ışığı ve yolu güncelle."""
+    global start, goal, path, path_index
+    start, goal = find_start_goal(grid)
+    tl_pos = find_traffic_light_pos(grid)
+    traffic_light.position = tl_pos
+    path = compute_path(current_algo, grid, start, goal)
+    path_index = 0
+
+
+def set_single_cell(char, r, c):
+    """S, G veya T taşırken eskiyi sil, yeniyi koy."""
+    # Eskiyi sil
+    for rr in range(ROWS):
+        for cc in range(COLS):
+            if grid[rr][cc] == char:
+                grid[rr][cc] = 0
+    # Yeniyi koy
+    grid[r][c] = char
+
+
 running = True
-
 while running:
-    clock.tick(3)  # biraz daha akıcı hareket (3 FPS)
+    clock.tick(5)  # biraz akıcı hız
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
+        # Algoritma seçimi
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_1:
                 current_algo = "BFS"
+                recalc_everything()
             elif event.key == pygame.K_2:
                 current_algo = "Greedy"
+                recalc_everything()
             elif event.key == pygame.K_3:
                 current_algo = "A*"
+                recalc_everything()
 
-            # Algoritma değişince her şeyi resetle
-            path = compute_path(current_algo, start, goal)
-            path_index = 0
-            dynamic_obstacle_created = False
-            dynamic_obstacle_pos = None
-            grid = [row[:] for row in [
-                ['S', 0,   0,   0,   0,   0,   0,   0,   0,   0],
-                [0,   1,   1,   1,   0,   1,   0,   1,   1,   0],
-                [0,   0,   0,   1,  'T',  1,   0,   0,   0,   0],
-                [1,   1,   0,   1,   0,   1,   1,   1,   0,   1],
-                [0,   0,   0,   0,   0,   0,   0,   1,   0,   0],
-                [0,   1,   1,   1,   1,   1,   0,   1,   0,   1],
-                [0,   0,   0,   0,   0,   0,   0,   1,   0,   0],
-                [0,   1,   1,   1,   1,   1,   0,   0,   0,  'G'],
-            ]]
+            # Düzenleme modları
+            elif event.key == pygame.K_o:
+                edit_mode = "obstacle"
+            elif event.key == pygame.K_s:
+                edit_mode = "start"
+            elif event.key == pygame.K_g:
+                edit_mode = "goal"
+            elif event.key == pygame.K_t:
+                edit_mode = "traffic"
+            elif event.key == pygame.K_r:
+                # haritayı tamamen sıfırla
+                grid = copy_grid()
+                start, goal = find_start_goal(grid)
+                traffic_light.position = find_traffic_light_pos(grid)
+                path = compute_path(current_algo, grid, start, goal)
+                path_index = 0
+                edit_mode = "none"
 
-    # Yol yoksa araba start'ta dursun
-    if not path:
-        car_r, car_c = start
-    else:
-        traffic_light.update()
+        # Fare ile tıklama
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            if my >= UI_HEIGHT:
+                c = mx // CELL_SIZE
+                r = (my - UI_HEIGHT) // CELL_SIZE
+                if 0 <= r < ROWS and 0 <= c < COLS:
+                    cell = grid[r][c]
 
-        # ---------- DİNAMİK ENGEL (güvenli) ----------
-        # Araç biraz ilerlesin, sonra yolun İLERİSİNE engel koymayı dene
-        if (not dynamic_obstacle_created) and path_index >= 4 and len(path) > path_index + 3:
-            candidate_pos = path[path_index + 3]
-            cr, cc = candidate_pos
+                    if edit_mode == "obstacle":
+                        # sadece yol/engel arasında değiştir
+                        if cell == 0:
+                            grid[r][c] = 1
+                        elif cell == 1:
+                            grid[r][c] = 0
+                    elif edit_mode == "start":
+                        set_single_cell('S', r, c)
+                    elif edit_mode == "goal":
+                        set_single_cell('G', r, c)
+                    elif edit_mode == "traffic":
+                        # aynı yere basılırsa kaldır
+                        if cell == 'T':
+                            grid[r][c] = 0
+                            traffic_light.position = None
+                        else:
+                            set_single_cell('T', r, c)
 
-            if grid[cr][cc] == 0:
-                # Geçici olarak engel koy
-                old_value = grid[cr][cc]
-                grid[cr][cc] = 1
+                    recalc_everything()
 
-                current_pos = path[path_index]
-                new_path = compute_path(current_algo, current_pos, goal)
+    # --- Yol ve trafik ışığı güncelleme ---
+    if path:
+        current_cell = path[path_index]
 
-                if new_path:
-                    # Yeni yol bulundu -> dinamik engel kalıcı
-                    dynamic_obstacle_created = True
-                    dynamic_obstacle_pos = candidate_pos
-                    path = new_path
-                    path_index = 0
-                else:
-                    # Yol tamamen kapanıyorsa engeli geri al
-                    grid[cr][cc] = old_value
-
-        # Arabanın mevcut konumu
-        car_r, car_c = path[path_index]
-
-        # Trafik ışığı kontrolü
-        if (car_r, car_c) == traffic_light.position and traffic_light.is_red():
-            pass  # kırmızıda bekle
+        # Trafik ışığı varsa ve kırmızıysa bekle
+        if (
+            traffic_light.position is not None
+            and current_cell == traffic_light.position
+            and traffic_light.is_red()
+        ):
+            pass
         else:
             if path_index < len(path) - 1:
                 path_index += 1
-                car_r, car_c = path[path_index]
+                current_cell = path[path_index]
 
-    # ======================
-    # 4) ÇİZİM
-    # ======================
+    traffic_light.update()
 
-    screen.fill((25, 25, 30))  # koyu arka plan
+    # --- ÇİZİM ---
+    screen.fill((20, 20, 30))
 
-    # Haritayı çiz
+    # Harita
     for r in range(ROWS):
         for c in range(COLS):
             cell = grid[r][c]
             rect = pygame.Rect(
                 c * CELL_SIZE,
-                r * CELL_SIZE + 40,   # üstte yazı alanı için 40 piksel kaydır
+                UI_HEIGHT + r * CELL_SIZE,
                 CELL_SIZE,
                 CELL_SIZE
             )
 
             if cell == 1:
-                # Dinamik engel ise farklı renkte göster
-                if dynamic_obstacle_pos == (r, c):
-                    color = (180, 40, 40)   # kırmızımsı dinamik engel
-                else:
-                    color = (80, 80, 80)    # normal engel
+                color = (80, 80, 80)          # engel
             elif cell == 'S':
-                color = (0, 80, 220)        # başlangıç
+                color = (0, 90, 220)          # başlangıç
             elif cell == 'G':
-                color = (0, 180, 0)         # hedef
+                color = (0, 190, 0)           # hedef
             elif cell == 'T':
                 if traffic_light.is_red():
-                    color = (220, 40, 40)   # kırmızı ışık
+                    color = (230, 40, 40)     # kırmızı ışık
                 else:
-                    color = (60, 200, 60)   # yeşil ışık
+                    color = (60, 210, 60)     # yeşil ışık
             else:
-                color = (50, 50, 60)        # normal yol
+                color = (45, 45, 55)          # normal yol
 
-            pygame.draw.rect(screen, color, rect, border_radius=8)
-            pygame.draw.rect(screen, (100, 100, 110), rect, 1)
+            pygame.draw.rect(screen, color, rect, border_radius=6)
+            pygame.draw.rect(screen, (90, 90, 100), rect, 1)
 
-    # YOLU ÇİZGİ OLARAK GÖSTER 
+    # Yolu çizgi ile göster
     if len(path) > 1:
         points = []
         for (pr, pc) in path:
             x = pc * CELL_SIZE + CELL_SIZE // 2
-            y = pr * CELL_SIZE + 40 + CELL_SIZE // 2
+            y = UI_HEIGHT + pr * CELL_SIZE + CELL_SIZE // 2
             points.append((x, y))
-        pygame.draw.lines(screen, (0, 140, 255), False, points, 3)
+        pygame.draw.lines(screen, (0, 150, 255), False, points, 3)
 
-    # ARACI ÇİZ
+    # Aracı çiz
+    if path:
+        car_r, car_c = path[path_index]
+    elif start:
+        car_r, car_c = start
+    else:
+        car_r, car_c = 0, 0
+
     car_x = car_c * CELL_SIZE + CELL_SIZE // 2
-    car_y = car_r * CELL_SIZE + 40 + CELL_SIZE // 2
-    car_radius = CELL_SIZE // 3
-    pygame.draw.circle(screen, (255, 230, 0), (car_x, car_y), car_radius)
+    car_y = UI_HEIGHT + car_r * CELL_SIZE + CELL_SIZE // 2
+    pygame.draw.circle(screen, (255, 230, 0), (car_x, car_y), CELL_SIZE // 2 - 4)
 
-    # BİLGİ YAZILARI
-    text_alg = font.render(f"Algoritma: {current_algo}  (1:BFS  2:Greedy  3:A*)", True, (255, 255, 255))
-    screen.blit(text_alg, (10, 10))
+    # Üst yazılar
+    mode_text_map = {
+        "none": "Düzenleme modu: yok",
+        "obstacle": "Düzenleme modu: Engel (O)",
+        "start": "Düzenleme modu: Başlangıç (S)",
+        "goal": "Düzenleme modu: Hedef (G)",
+        "traffic": "Düzenleme modu: Trafik lambası (T)",
+    }
+    text1 = font.render(
+        f"Algoritma: {current_algo}  (1=BFS  2=Greedy  3=A*)", True, (255, 255, 255)
+    )
+    text2 = font.render(
+        mode_text_map.get(edit_mode, ""), True, (200, 200, 200)
+    )
+    text3 = font.render("R: Reset | Fare + O/S/G/T ile haritayı canlı düzenle", True, (200, 200, 200))
 
-    if dynamic_obstacle_created:
-        text_dyn = font.render("Dinamik engel: kırmızı blok (rota yeniden hesaplandı)", True, (255, 200, 0))
-        screen.blit(text_dyn, (10, HEIGHT - 25))
+    screen.blit(text1, (10, 5))
+    screen.blit(text2, (10, 25))
+    screen.blit(text3, (10, 45))
 
     pygame.display.flip()
 
