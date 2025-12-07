@@ -1,17 +1,17 @@
-## 🧠 Proje Özeti — Otonom Araç Yol Bulma ve Simülasyon 🚗
+## Otonom Araç Yol Bulma ve Simülasyon 
 
 Bu projede grid tabanlı bir harita üzerinde **otonom bir aracın** başlangıç noktasından (*S*) hedef noktasına (*G*) güvenli ve uygun bir rota bulmasını sağlayan bir yol planlama sistemi geliştirdim. Haritadaki hareketler **Pygame** kullanılarak gerçek zamanlı olarak simüle edilmektedir.
 
 ---
 
-### 🔹 Kullanılan Teknolojiler
+###  Kullanılan Teknolojiler
 - Python 3
 - Pygame (Grafiksel simülasyon)
 - Yol bulma algoritmaları (BFS, Greedy, A*)
 
 ---
 
-### 🔹 Yol Bulma Algoritmaları
+###  Yol Bulma Algoritmaları
 
 | Algoritma | Açıklama |
 |----------|---------|
@@ -23,7 +23,7 @@ Her bir algoritma çalışırken farklı yollar çizer ve sonuçlar karşılaşt
 
 ---
 
-### 🔹 Trafik Işığı Sistemi
+###  Trafik Işığı Sistemi
 Haritada bir **Trafik Lambası (T)** bulunmaktadır:
 
 - Araç **kırmızıda durur**
@@ -34,7 +34,7 @@ Bu sayede araç **trafik kurallarına uyan** bir yapay zekaya dönüşür.
 
 ---
 
-### 🔹 Dinamik Engel Yönetimi
+###  Dinamik Engel Yönetimi
 
 - Fareyle haritaya yeni engeller ekleyebilirim
 - Mevcut engelleri kaldırabilirim
@@ -45,7 +45,7 @@ Gerçek hayattaki **ani yol kapanmalarına** başarılı tepki verir.
 
 ---
 
-### 🕹️ Kullanıcı Kontrolleri
+###  Kullanıcı Kontrolleri
 
 Aşağıdaki tuşlar ile simülasyonu yönetebilirim:
 
@@ -65,7 +65,7 @@ Aşağıdaki tuşlar ile simülasyonu yönetebilirim:
 
 ---
 
-### 📍 Harita Yapısı
+###  Harita Yapısı
 
 Harita bir matristir:
 
@@ -81,7 +81,7 @@ Araç hücre hücre ilerler, yol çizgisi simülasyonda mavi olarak gösterilir.
 
 ---
 
-### 🎯 Projenin Amacı
+###  Projenin Amacı
 
 Bu proje ile:
 
@@ -93,7 +93,7 @@ gerçek zamanlı bir senaryoda gösterebildim.
 
 ---
 
-### 🏁 Sonuç
+###  Sonuç
 
 Araç:
 
